@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Raw data is gathered by the user (see data/README.md). Keep it out of git;
+# it is reproducible via scripts/fetch_data.py and may be large / licensed.
+data/raw/*
+!data/raw/.gitkeep
+
+# Generated artefacts
+results/*.png
+results/*.csv
+!results/.gitkeep
