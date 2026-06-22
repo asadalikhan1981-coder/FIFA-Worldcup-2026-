@@ -1,28 +1,29 @@
 # 2026 World Cup — forecast & method (plain English)
 
-*As of 21 June 2026 (40 of 72 group games played). Re-run any time with
-`python scripts/run_forecast.py`.*
+*Locked one-shot forecast, dated 21 June 2026 (40 of 72 group games played),
+**1,000,000** simulations. The public version is [POST.md](POST.md). Reproduce
+with `python scripts/run_forecast.py 1000000`.*
 
 ## The prediction (knockouts → winner)
 
-Each number is the model's probability, from 20,000 simulated tournaments that
+Each number is the model's probability, from 1,000,000 simulated tournaments that
 **lock the games already played** and simulate everything left.
 
 | Team | Reach R16 | Reach QF | Reach SF | Reach Final | **Win** |
 |---|--:|--:|--:|--:|--:|
-| Argentina | 75% | 53% | 36% | 25% | **16.6%** |
-| Spain | 72% | 48% | 31% | 20% | **12.5%** |
-| France | 64% | 38% | 22% | 12% | **6.3%** |
-| Brazil | 64% | 37% | 21% | 12% | **6.0%** |
-| Morocco | 61% | 36% | 20% | 11% | **5.4%** |
-| Colombia | 61% | 34% | 18% | 10% | **4.8%** |
-| Japan | 58% | 33% | 18% | 9% | **4.7%** |
-| Portugal | 48% | 28% | 16% | 9% | **4.6%** |
-| England | 60% | 33% | 17% | 8% | **3.9%** |
-| Germany | 60% | 31% | 15% | 8% | **3.5%** |
+| Argentina | 75% | 53% | 36% | 25% | **16.3%** |
+| Spain | 72% | 48% | 32% | 20% | **12.6%** |
+| France | 64% | 38% | 22% | 12% | **6.7%** |
+| Brazil | 64% | 37% | 21% | 12% | **6.2%** |
+| Morocco | 61% | 36% | 20% | 11% | **5.5%** |
+| Colombia | 60% | 34% | 18% | 10% | **4.9%** |
+| Portugal | 49% | 29% | 16% | 9% | **4.6%** |
+| Japan | 58% | 32% | 18% | 9% | **4.4%** |
+| England | 60% | 33% | 17% | 9% | **4.2%** |
+| Germany | 60% | 31% | 15% | 7% | **3.4%** |
 
-**Headline:** Argentina most likely (16.6%), then Spain (12.5%), then a tight
-chasing pack (France, Brazil, Morocco ~5–6%).
+**Headline:** Argentina most likely (16.3%), then Spain (12.6%), then a tight
+chasing pack (France, Brazil, Morocco ~5–7%).
 
 ## How the method works (no jargon)
 
