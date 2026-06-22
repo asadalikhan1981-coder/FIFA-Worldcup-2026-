@@ -96,6 +96,23 @@ Two things this teaches us, both kept honestly on the record:
 
 Run it: `python scripts/run_vol_backtest.py`.
 
+**Novel reachable inputs don't beat plain Elo either.** A leave-one-tournament-out
+loop (`scripts/run_edge_loop.py`) tested goal-timing "late-game strength" and
+recent "form" — the only novel signals reachable from this sandbox:
+
+| Model | OOS RPS | vs Elo (paired t) |
+|---|--:|---|
+| Elo only | 0.2073 | — |
+| Elo + form | 0.2069 | −0.0004 (t=−0.28, NS) |
+| Elo + late-strength | 0.2078 | worse; coefficient ≈ 0 |
+| Elo + form + late | 0.2077 | worse |
+
+Three independent honest attempts (volatility, goal-timing, form) converge on the
+same verdict: **no edge is available from the data reachable here** (match results
++ goal minutes). The bottleneck is *information*, and the informative data
+(closing odds, squad value/availability, xG) is network-gated to the user's
+laptop. This is a real finding, not a failure of effort.
+
 ## Why the network setup looks the way it does
 
 This was developed in Claude Code's web sandbox, whose egress policy reaches only

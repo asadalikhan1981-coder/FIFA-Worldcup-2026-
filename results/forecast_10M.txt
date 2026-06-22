@@ -1,0 +1,2 @@
+Conditioning on 40/72 group games played (through 2026-06-21); simulating 32 remaining + knockouts, 10,000,000 runs.
+
