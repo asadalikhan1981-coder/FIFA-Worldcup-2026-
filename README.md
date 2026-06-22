@@ -107,11 +107,31 @@ recent "form" — the only novel signals reachable from this sandbox:
 | Elo + late-strength | 0.2078 | worse; coefficient ≈ 0 |
 | Elo + form + late | 0.2077 | worse |
 
-Three independent honest attempts (volatility, goal-timing, form) converge on the
-same verdict: **no edge is available from the data reachable here** (match results
-+ goal minutes). The bottleneck is *information*, and the informative data
-(closing odds, squad value/availability, xG) is network-gated to the user's
-laptop. This is a real finding, not a failure of effort.
+Three results-only attempts (volatility, goal-timing, form) found no edge — the
+bottleneck is *information*. So we searched public sources for a forward-looking
+signal and found one that is **free and reachable**.
+
+### ✅ Squad market value beats Elo out-of-sample (the edge)
+
+Using free public **Transfermarkt squad values at kickoff** (`ericsanmiguel/football_elo`,
+2018 + 2022 World Cups), a leave-one-tournament-out test
+(`scripts/run_squad_value_test.py`):
+
+| Model | OOS RPS | note |
+|---|--:|---|
+| Elo only | 0.2152 | the standard signal |
+| **Squad value only** | **0.2046** | beats Elo *on its own* |
+| **Elo + squad value** | **0.2039** | best; ΔRPS −0.0114 vs Elo (t=−1.49) |
+
+Improves **both** tournaments, **robust to heavy regularization** (squad keeps ~3×
+Elo's weight), and squad-value-alone already beats Elo. **Honest caveat:** only 2
+tournaments / 128 matches have public squad data, so it is **directionally strong
+but not yet statistically significant** (t=−1.49). Beating the *market* (closing
+odds) is still untested.
+
+**Final model = Elo + squad value.** On 2026 it corrects Elo's blind spots —
+France/England/Germany (elite squads, lagged by results-Elo) rise toward the
+market; Argentina (strong results, older squad) falls. See `scripts/run_final_forecast.py`.
 
 ## Why the network setup looks the way it does
 

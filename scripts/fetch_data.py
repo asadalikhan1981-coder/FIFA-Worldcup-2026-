@@ -11,15 +11,24 @@ import urllib.request
 from pathlib import Path
 
 RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
+M = "https://raw.githubusercontent.com/martj42/international_results/master/"
+FE = "https://raw.githubusercontent.com/ericsanmiguel/football_elo/main/data/squads/"
 FILES = {
-    "results.csv": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
-    "shootouts.csv": "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv",
-    "goalscorers.csv": "https://raw.githubusercontent.com/martj42/international_results/master/goalscorers.csv",
+    "results.csv": M + "results.csv",
+    "shootouts.csv": M + "shootouts.csv",
+    "goalscorers.csv": M + "goalscorers.csv",
+    # free, public squad market values at tournament kickoff (Transfermarkt)
+    "squads/2018.csv": FE + "2018.csv",
+    "squads/2022.csv": FE + "2022.csv",
+    "squads/2026.csv": FE + "2026.csv",
+    # free historical FIFA ranking points
+    "fifa_ranking.csv": "https://raw.githubusercontent.com/Dato-Futbol/fifa-ranking/master/ranking_fifa_historical.csv",
 }
 
 
 def main() -> None:
     RAW.mkdir(parents=True, exist_ok=True)
+    (RAW / "squads").mkdir(exist_ok=True)
     for name, url in FILES.items():
         dest = RAW / name
         print(f"fetching {name} ...", end=" ", flush=True)
