@@ -48,7 +48,8 @@ which is the match-level shadow of the same bias.
 | Out-of-sample match backtest (2018/22 WC, Euro 16/20/24) | ✅ runs on real data |
 | Proper scoring: RPS, Brier, log-loss, calibration plot | ✅ |
 | **Volatility-aware model (level + swing)** — candidate novel method | ✅ built + gradient-checked; **no match-level edge — see Findings** |
-| Monte-Carlo bracket sim over the real 2026 draw | ⬜ next — where swing *compounds* and becomes testable |
+| Monte-Carlo bracket sim over the real 2026 draw | ✅ built + tested; conditions on live results |
+| **2026 forecast (knockouts → winner)** | ✅ see [REPORT.md](REPORT.md) — Argentina 16.6%, Spain 12.5% (differentiated, **edge unproven**) |
 | Projected-XI availability input | ⬜ needs squad/availability data (laptop) |
 | Market tail-bias exploit + ROI backtest | ⬜ needs historical odds (laptop) |
 | Benchmark vs bookmaker closing odds | ⬜ needs odds data (laptop) |
