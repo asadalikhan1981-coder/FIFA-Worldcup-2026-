@@ -47,7 +47,8 @@ which is the match-level shadow of the same bias.
 | Vanilla Elo → Dixon-Coles match model (control) | ✅ built, tested |
 | Out-of-sample match backtest (2018/22 WC, Euro 16/20/24) | ✅ runs on real data |
 | Proper scoring: RPS, Brier, log-loss, calibration plot | ✅ |
-| Monte-Carlo bracket sim over the real 2026 draw | ⬜ next |
+| **Volatility-aware model (level + swing)** — candidate novel method | ✅ built + gradient-checked; **no match-level edge — see Findings** |
+| Monte-Carlo bracket sim over the real 2026 draw | ⬜ next — where swing *compounds* and becomes testable |
 | Projected-XI availability input | ⬜ needs squad/availability data (laptop) |
 | Market tail-bias exploit + ROI backtest | ⬜ needs historical odds (laptop) |
 | Benchmark vs bookmaker closing odds | ⬜ needs odds data (laptop) |
@@ -70,6 +71,29 @@ The control beats the trivial references but sits a touch worse than a good
 bookmaker (~0.19–0.20 RPS) — appropriately unimpressive for a control. Any
 "novel" model that does not push the **ALL** RPS below **0.2105** out-of-sample
 has earned nothing.
+
+## Findings (honest, updated as we go)
+
+**The volatility-aware "level + swing" model gives no edge at the match level.**
+Nested, out-of-sample, 281 matches:
+
+| Question | ΔRPS (paired) | t | Verdict |
+|---|---|---|---|
+| Swing ON vs OFF (the novelty) | −0.0002 ± 0.0006 | −0.27 | **no measurable edge** (noise) |
+| New family vs Elo→Dixon-Coles | −0.0027 ± 0.0053 | −0.51 | better, **not significant** |
+
+Two things this teaches us, both kept honestly on the record:
+
+1. Match-level W/D/L is **mean-dominated**, so it is nearly blind to a *variance*
+   innovation by construction. Swing only compounds over a 7-game tournament
+   path, so its real test is **tournament outright probability vs market
+   longshot prices** — pending odds data. Until then we claim nothing for it.
+2. Adding model *flexibility* on results-only data moved the needle by t ≈ 0.
+   This empirically confirms the "variance tax": a real edge must come from new
+   **information** (availability / squad value / xG) or **market structure**
+   (the longshot fade), not from fancier maths on the same results.
+
+Run it: `python scripts/run_vol_backtest.py`.
 
 ## Why the network setup looks the way it does
 
