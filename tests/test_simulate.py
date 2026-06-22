@@ -43,8 +43,11 @@ def test_probabilities_valid_and_monotone():
     # round reach probabilities are ordered: R16 >= QF >= SF >= final >= win
     for _, r in df.iterrows():
         assert r["reach_R16"] >= r["reach_QF"] >= r["reach_SF"] >= r["reach_final"] >= r["win"]
-    # 32 teams reach the R16 on every run -> total reach_R16 mass == 32
-    assert abs(df["reach_R16"].sum() - 32.0) < 1e-9
+    # each round has a fixed headcount every run: 16 in R16, 8 QF, 4 SF, 2 final, 1 win
+    assert abs(df["reach_R16"].sum() - 16.0) < 1e-9
+    assert abs(df["reach_QF"].sum() - 8.0) < 1e-9
+    assert abs(df["reach_SF"].sum() - 4.0) < 1e-9
+    assert abs(df["reach_final"].sum() - 2.0) < 1e-9
     # stronger teams (low index) should win more often than the weakest
     assert df.set_index("team").loc["T0", "win"] > df.set_index("team").loc["T47", "win"]
 
