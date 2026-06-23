@@ -12,7 +12,9 @@ python scripts/fetch_odds.py
 | File | Tournament | Odds | n | Bar |
 |---|---|---|--:|---|
 | `wc2022_pinnacle_closing.csv` | WC-2022 (all) | **Pinnacle closing** | 64 | hard (sharpest book, closing price) |
-| `wc2018_average_prematch.csv` | WC-2018 (group stage) | **average pre-match** | 48 | softer (averaged books, not closing) |
+| `wc2018_average_prematch.csv` | WC-2018 (group stage) | **average pre-match** | 48 | soft (averaged books, not closing) |
+| `wc2014_average_prematch.csv` | WC-2014 (all) | **average pre-match** | 63 | soft |
+| `wc2010_average_prematch.csv` | WC-2010 (all) | **average pre-match** | 64 | soft |
 
 ## Columns (both files)
 
@@ -31,18 +33,20 @@ De-vigging (removing the overround) happens at scoring time in
 
 - **WC-2022** — [`eatpizzanot/soccer-dataset`](https://github.com/eatpizzanot/soccer-dataset)
   (CC-licensed), API-Football **closing** 1X2 prices, Pinnacle.
-- **WC-2018** — [`mrthlinh/FIFA-World-Cup-Prediction`](https://github.com/mrthlinh/FIFA-World-Cup-Prediction)
+- **WC-2010/2014/2018** — [`mrthlinh/FIFA-World-Cup-Prediction`](https://github.com/mrthlinh/FIFA-World-Cup-Prediction)
   (`data/database_matches.csv`), **average** of several bookmakers' pre-match 1X2.
 
 ## Coverage notes (honest)
 
-The two bars differ in sharpness — read them separately, not pooled. Average
-pre-match odds (2018) are **softer** than a closing line (2022), so beating 2018
-is the weaker result.
+The bars differ in sharpness — read them separately, not pooled. Average
+pre-match odds (2010/2014/2018) are **softer** than a closing line (2022), so
+beating them is the weaker result; the 2022 closing comparison is the meaningful
+bar. Only 2018/2022 have free validated squad values, so 2010/2014 test the
+control (Elo → Dixon-Coles) vs market only — see [MARKET.md](../../MARKET.md) §1.
 
-**Why no WC-2018 closing line, and no knockouts?** The sharp/closing free source
-(eatpizzanot) has no 2018 odds at all; `the-odds-api`'s historical endpoint is
-paid and OddsPortal needs scraping. The free 2018 fallback used here was frozen
-**mid-tournament**, so only the 48 group games are present. To improve this, drop
-a `wc2018_*_closing.csv` (or any tournament) here with the same columns — the
-backtest fits leave-one-tournament-out and picks up whatever is present.
+**Why no closing line before 2022?** The sharp/closing free source (eatpizzanot)
+has no pre-2022 odds; `the-odds-api`'s historical endpoint is paid and OddsPortal
+needs scraping. The mrthlinh fallback is average pre-match odds; its 2018 capture
+was frozen **mid-tournament** (group games only). To improve this, drop a
+`*_closing.csv` (or any tournament) here with the same columns — the backtest
+fits leave-one-tournament-out and picks up whatever is present.

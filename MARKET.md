@@ -8,62 +8,86 @@ how the model disagrees with the 2026 outright market.
 
 ---
 
-## 1. Match level — does the model beat the line? (It sits *at market level*.)
+## 1. Match level — does the model beat the line? (Depends how sharp the line is.)
 
-**Benchmark:** de-vigged 1X2 odds for two World Cups, each the best freely
+**Benchmark:** de-vigged 1X2 odds for **four** World Cups, each the best freely
 available for its edition (see [`data/odds/README.md`](data/odds/README.md)).
-The two bars are **different sharpness and not pooled naively**:
+Crucially the bars differ in **sharpness**, and that turns out to be the whole story:
 
-| Tournament | Odds | Bar | n |
-|---|---|---|--:|
-| **WC-2022** | Pinnacle **closing** | the *hard* bar (sharpest book, closing price ≈ efficient market) | 64 |
-| **WC-2018** | **average** pre-match (group stage only) | a *softer* bar — easier to beat | 48 |
+| Tournament | Odds | Bar | n | Squad data? |
+|---|---|---|--:|:--:|
+| **WC-2022** | Pinnacle **closing** | *hard* (sharpest book, closing ≈ efficient market) | 64 | ✅ |
+| WC-2018 | **average** pre-match (group only) | soft | 48 | ✅ |
+| WC-2014 | average pre-match | soft | 63 | ❌ |
+| WC-2010 | average pre-match | soft | 64 | ❌ |
 
-Every forecast is scored on identical W/D/L outcomes. Both probit models are fit
-**leave-one-tournament-out** (each tournament predicted from the other), so every
-number is genuinely out-of-sample — the line being scored never trained the model.
+Forecasts are scored on identical W/D/L outcomes. The squad blend (and its
+Elo-only probit twin) is fit **leave-one-tournament-out** over the editions with
+validated squad values (2018/2022) → fully out-of-sample. 2010/2014 have no free
+squad values (see §1b), so they test the **control** (Elo → Dixon-Coles) vs market.
 
-| Forecast | WC-2022 RPS *(vs closing)* | WC-2018 RPS *(vs average)* |
-|---|--:|--:|
-| **MARKET (de-vigged)** | **0.2079** | **0.1963** |
-| Baseline Elo → Dixon-Coles | 0.2251 | 0.2026 |
-| Elo only (probit, OOS) | 0.2162 | 0.2091 |
-| **Elo + squad value (OOS)** | **0.2102** | **0.1933** |
+| Forecast | WC-2022 *(closing, sharp)* | WC-2018 *(avg)* | WC-2014 *(avg)* | WC-2010 *(avg)* |
+|---|--:|--:|--:|--:|
+| **MARKET (de-vigged)** | **0.2079** | **0.1963** | **0.1945** | **0.1989** |
+| Baseline Elo → Dixon-Coles | 0.2251 | 0.2026 | **0.1915** | **0.1916** |
+| Elo + squad value (OOS) | **0.2102** | **0.1933** | — | — |
 
 **Paired ΔRPS vs the market** (negative = model beats market):
 
-| Model | WC-2022 (closing) | WC-2018 (average) |
-|---|--:|--:|
-| Baseline Elo → Dixon-Coles | +0.0172 (t=1.63) | +0.0063 (t=0.47) |
-| **Elo + squad value** | **+0.0023 (t=0.35)** | **−0.0030 (t=−0.27)** |
+| Model | WC-2022 (closing) | WC-2018 | WC-2014 | WC-2010 |
+|---|--:|--:|--:|--:|
+| Baseline Elo → DC | +0.0172 (t=1.63) | +0.0063 (t=0.47) | **−0.0030 (t=−0.30)** | **−0.0073 (t=−0.72)** |
+| **Elo + squad value** | **+0.0023 (t=0.35)** | **−0.0030 (t=−0.27)** | — | — |
 
 ### Read it honestly
 
-- **The model sits right at market level.** Against the **sharp** 2022 closing
-  line it trails by a hair (+0.0023 RPS, t = 0.35 — indistinguishable from zero);
-  against the **softer** 2018 average line it edges ahead (−0.0030, t = −0.27).
-  The sign of the gap just tracks how sharp the specific line is. No *proven* edge
-  over a closing price — exactly as the README predicted — but it is not beaten by
-  one either.
-- **Squad value is what gets it there.** In **both** tournaments plain Elo clearly
-  trails the market and the squad-value signal closes the gap — the same signal
-  that beat Elo out-of-sample erases the deficit to the line.
-- **Pooled group stage** (96 games, clean W/D/L, mixed bars): model 0.2095 vs
-  market 0.2108 — level (Δ −0.0013, t = −0.19). Pooling mixes a soft and a sharp
-  line, so read the per-tournament rows as the real result.
+- **It depends entirely on how sharp the line is.**
+  - Against the **soft** average lines (2010/2014/2018) the model is **level or
+    better** — plain Elo even *beats* the 2010 and 2014 average prices. None of
+    these gaps is significant (all |t| < 1), so "roughly level" is the fair call.
+  - Against the one **sharp** line — Pinnacle **closing** 2022 — plain Elo clearly
+    **trails** (+0.0172 RPS, t = 1.63), and it takes **squad value** to claw back
+    to market level (+0.0023, t = 0.35, indistinguishable from zero).
+- **No proven edge over a closing price** — exactly as the README predicted — but
+  the model is not beaten by one either, and it *does* beat soft bookmaker lines.
+- **Squad value is the difference-maker** at the hard bar: it removes ~87% of
+  plain Elo's deficit to the 2022 closing line, the same signal that beat Elo
+  out-of-sample.
 - **Robustness:** Shin de-vig instead of proportional moves each market bar by
   <0.001; conclusions unchanged.
 
 ### Caveats (don't over-read)
 
-- **Two tournaments, 112 matches**, wide confidence intervals. "At market level"
-  is the honest summary — not "beats", not "clearly worse".
-- **Mixed benchmarks.** 2018 is *average pre-match* odds (no free 2018 *closing*
-  line was found) and *group stage only* (the upstream set was frozen
-  mid-tournament). Average odds are softer than closing, so the 2018 "win" is the
-  weaker of the two results; the 2022 closing comparison is the meaningful bar.
+- **239 matches across 4 editions, wide CIs.** Only WC-2022 uses a true *closing*
+  line; the other three use *average pre-match* odds, which are softer (easier to
+  beat) — so the soft-line "wins" are the weaker results. The 2022 closing
+  comparison is the meaningful bar.
+- WC-2018 is group stage only (the upstream capture was frozen mid-tournament);
+  WC-2014 is missing 1 game upstream.
 - Drop a better/longer odds file into `data/odds/` with the same columns and
   `run_market_backtest.py` extends automatically.
+
+### 1b. Why the squad edge stops at 2018/2022 (an honest dead-end)
+
+The obvious way to make the squad edge *significant* is more tournaments. I tried
+to reconstruct 2010/2014 squad values for free and **deliberately did not ship
+it**, because the data isn't clean enough:
+
+- **Value source — validated.** Transfermarkt market-value histories from the free
+  `salimt/football-datasets` reproduce the project's trusted kickoff values almost
+  exactly: joined by Transfermarkt **player_id**, 2018 per-team totals match the
+  `ericsanmiguel` source at ratio **~1.00**.
+- **Rosters — too noisy.** Free 2010/2014 squad *rosters* exist only as **names**
+  (no ids), so they need name-matching to recover player_ids. That matches ~82% of
+  players (96% correct when matched), but it **breaks on transliteration-heavy
+  squads** (e.g. Saudi Arabia 2018: 0 of 12 matched). Reconstructed team totals
+  rank-correlate 0.99 with truth but the *level* correlation is only ~0.69 — too
+  much measurement error to stake the headline edge on.
+
+Manufacturing a noisy squad feature and calling it an extended edge would violate
+this project's "no fake precision" rule, so 2010/2014 stay **control-only**. A
+clean extension needs an **id-based roster source** (e.g. the Kaggle
+`dcaribou/transfermarkt-datasets` national-team lineups — gated behind a login).
 
 Reproduce: `python scripts/fetch_odds.py` then `python scripts/run_market_backtest.py`.
 

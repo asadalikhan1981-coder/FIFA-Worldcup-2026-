@@ -52,7 +52,7 @@ which is the match-level shadow of the same bias.
 | **2026 forecast (knockouts → winner)** | ✅ see [REPORT.md](REPORT.md) — Argentina 16.6%, Spain 12.5% (differentiated, **edge unproven**) |
 | Projected-XI availability input | ⬜ needs squad/availability data (laptop) |
 | Market tail-bias exploit + ROI backtest | ⬜ needs historical *outright* odds |
-| **Benchmark vs bookmaker odds (WC 2018 + 2022)** | ✅ done — **at market level; beats soft 2018 avg, matches sharp 2022 closing** ([MARKET.md](MARKET.md)) |
+| **Benchmark vs bookmaker odds (WC 2010–2022, 239 matches)** | ✅ done — **beats soft lines; no proven edge over sharp 2022 closing** ([MARKET.md](MARKET.md)) |
 
 ### The number to beat — baseline, out-of-sample
 
@@ -133,26 +133,30 @@ odds) is still untested.
 France/England/Germany (elite squads, lagged by results-Elo) rise toward the
 market; Argentina (strong results, older squad) falls. See `scripts/run_final_forecast.py`.
 
-### ➖ Versus the market: the model sits *at market level* (doesn't beat a closing line)
+### ➖ Versus the market: beats soft lines, no proven edge over a sharp closing line
 
-The hard bar, now tested on two World Cups with free odds. Probit models fit
-**leave-one-tournament-out** (each edition predicted from the other → fully OOS):
+The hard bar, now tested on **four** World Cups (2010/2014/2018/2022, 239 matches)
+with free odds. Squad probit fit **leave-one-tournament-out** over the editions
+with validated squad values (2018/2022) → fully OOS. ΔRPS vs the de-vigged market
+(negative = model beats market):
 
-| Forecast | WC-2022 *(Pinnacle **closing**, sharp)* | WC-2018 *(average pre-match, soft)* |
-|---|--:|--:|
-| **Market (de-vigged)** | **0.2079** | **0.1963** |
-| Baseline Elo → Dixon-Coles | 0.2251 | 0.2026 |
-| **Elo + squad value (OOS)** | **0.2102** (Δ +0.0023, t=0.35) | **0.1933** (Δ −0.0030, t=−0.27) |
+| Forecast | WC-2022 *(Pinnacle **closing**, sharp)* | WC-2018 *(avg)* | WC-2014 *(avg)* | WC-2010 *(avg)* |
+|---|--:|--:|--:|--:|
+| Baseline Elo → Dixon-Coles | +0.0172 (t=1.63) | +0.0063 | **−0.0030** | **−0.0073** |
+| **Elo + squad value (OOS)** | **+0.0023 (t=0.35)** | **−0.0030** | — | — |
 
-**The model is level with the market** — a hair behind the *sharp* 2022 closing
-line, a hair ahead of the *softer* 2018 average line; the sign just tracks how
-sharp the price is. No *proven* edge over a closing price (exactly as predicted —
-closing odds are near-efficient), but not beaten by one either. In **both**
-tournaments plain Elo trails the market and **squad value closes the gap**.
-Honest caveats: 112 matches, wide CIs, and the two bars differ in sharpness (2018
-is *average* odds, group stage only — the weaker result). Full write-up + the
-live outright comparison (model backs **USA at 6% vs the market's ~2%**) in
-[MARKET.md](MARKET.md). Run: `python scripts/fetch_odds.py && python scripts/run_market_backtest.py`.
+**It depends on how sharp the line is.** Against **soft** average lines
+(2010/2014/2018) the model is level-or-better — plain Elo even *beats* the
+2010/2014 prices (none significant, |t|<1). Against the one **sharp** line —
+Pinnacle **closing** 2022 — plain Elo clearly trails and it takes **squad value**
+to claw back to market level. So: the model beats soft bookmaker lines but shows
+**no proven edge over a closing price** (as predicted — closing odds are
+near-efficient), and isn't beaten by one either. 2010/2014 are control-only: free
+squad *values* validate ~1.00 by Transfermarkt id, but free *rosters* need
+name-matching too noisy to trust for the edge (honest dead-end, see
+[MARKET.md](MARKET.md)). Full write-up + the live outright comparison (model backs
+**USA at 6% vs the market's ~2%**) there too.
+Run: `python scripts/fetch_odds.py && python scripts/run_market_backtest.py`.
 
 ## Why the network setup looks the way it does
 
