@@ -8,58 +8,62 @@ how the model disagrees with the 2026 outright market.
 
 ---
 
-## 1. Match level — does the model beat the closing line? (No, it *matches* it.)
+## 1. Match level — does the model beat the line? (It sits *at market level*.)
 
-**Benchmark:** Pinnacle **closing** 1X2 odds for all **64 WC-2022 matches**
-(the one past tournament with free public closing odds — see
-[`data/odds/README.md`](data/odds/README.md)). Pinnacle is the sharpest book, so
-its de-vigged closing price is, for practical purposes, *the* efficient-market
-probability. This is the hardest honest bar there is.
+**Benchmark:** de-vigged 1X2 odds for two World Cups, each the best freely
+available for its edition (see [`data/odds/README.md`](data/odds/README.md)).
+The two bars are **different sharpness and not pooled naively**:
 
-Every forecast is scored on identical W/D/L outcomes. The squad-value blend is
-fit on **WC-2018** and predicted on **WC-2022** — genuinely out-of-sample; the
-2022 line never trained it.
+| Tournament | Odds | Bar | n |
+|---|---|---|--:|
+| **WC-2022** | Pinnacle **closing** | the *hard* bar (sharpest book, closing price ≈ efficient market) | 64 |
+| **WC-2018** | **average** pre-match (group stage only) | a *softer* bar — easier to beat | 48 |
 
-| Forecast (n=64) | RPS | log-loss | Brier |
-|---|--:|--:|--:|
-| **MARKET — Pinnacle closing (de-vigged)** | **0.2079** | 1.0017 | 0.5846 |
-| Baseline Elo → Dixon-Coles (control) | 0.2251 | 1.0899 | 0.6235 |
-| Elo only (ordered probit, OOS) | 0.2162 | 1.0323 | 0.6093 |
-| **Elo + squad value (OOS)** | **0.2102** | 1.0084 | 0.5912 |
+Every forecast is scored on identical W/D/L outcomes. Both probit models are fit
+**leave-one-tournament-out** (each tournament predicted from the other), so every
+number is genuinely out-of-sample — the line being scored never trained the model.
+
+| Forecast | WC-2022 RPS *(vs closing)* | WC-2018 RPS *(vs average)* |
+|---|--:|--:|
+| **MARKET (de-vigged)** | **0.2079** | **0.1963** |
+| Baseline Elo → Dixon-Coles | 0.2251 | 0.2026 |
+| Elo only (probit, OOS) | 0.2162 | 0.2091 |
+| **Elo + squad value (OOS)** | **0.2102** | **0.1933** |
 
 **Paired ΔRPS vs the market** (negative = model beats market):
 
-| Model | ΔRPS | t |
+| Model | WC-2022 (closing) | WC-2018 (average) |
 |---|--:|--:|
-| Baseline Elo → Dixon-Coles | +0.0172 | +1.63 |
-| Elo + squad value | **+0.0023** | **+0.35** |
+| Baseline Elo → Dixon-Coles | +0.0172 (t=1.63) | +0.0063 (t=0.47) |
+| **Elo + squad value** | **+0.0023 (t=0.35)** | **−0.0030 (t=−0.27)** |
 
 ### Read it honestly
 
-- **The model does not beat the closing line** — exactly as the README predicted
-  it wouldn't. The best model trails Pinnacle by **+0.0023 RPS**, a gap that is
-  statistically indistinguishable from zero (t = 0.35).
-- **But it essentially *matches* the sharpest book.** Closing to within 0.0023
-  RPS of Pinnacle's *closing* price is a strong result — closing lines are the
-  thing public models are not supposed to be able to touch.
-- **Squad value is what closes the gap.** Plain Elo trails the market by a clear
-  +0.0172 RPS (t = 1.63); adding the squad-value signal removes ~87% of that gap.
-  The same signal that beat Elo out-of-sample also nearly erases the model's
-  deficit to the market.
-- **Group stage only** (48 games, no extra-time/penalty labelling ambiguity, the
-  cleanest apples-to-apples slice): market 0.2253 vs Elo+squad **0.2258** —
-  dead level.
-- **Robustness:** de-vigging by the Shin method instead of proportional moves the
-  market bar by 0.0009 (0.2079 → 0.2088); the conclusion is unchanged.
+- **The model sits right at market level.** Against the **sharp** 2022 closing
+  line it trails by a hair (+0.0023 RPS, t = 0.35 — indistinguishable from zero);
+  against the **softer** 2018 average line it edges ahead (−0.0030, t = −0.27).
+  The sign of the gap just tracks how sharp the specific line is. No *proven* edge
+  over a closing price — exactly as the README predicted — but it is not beaten by
+  one either.
+- **Squad value is what gets it there.** In **both** tournaments plain Elo clearly
+  trails the market and the squad-value signal closes the gap — the same signal
+  that beat Elo out-of-sample erases the deficit to the line.
+- **Pooled group stage** (96 games, clean W/D/L, mixed bars): model 0.2095 vs
+  market 0.2108 — level (Δ −0.0013, t = −0.19). Pooling mixes a soft and a sharp
+  line, so read the per-tournament rows as the real result.
+- **Robustness:** Shin de-vig instead of proportional moves each market bar by
+  <0.001; conclusions unchanged.
 
-### Caveats (do not over-read one tournament)
+### Caveats (don't over-read)
 
-- **One tournament, 64 matches.** Confidence intervals are wide; "matches the
-  market" is the honest summary, not "beats" and not "clearly worse".
-- **2018 closing odds were not freely available** (the upstream set has Pinnacle
-  closing for 2022 only; no clean free 2018 source was found). A second
-  tournament would tighten this. Drop a 2018 file into `data/odds/` with the same
-  columns and `run_market_backtest.py` extends automatically.
+- **Two tournaments, 112 matches**, wide confidence intervals. "At market level"
+  is the honest summary — not "beats", not "clearly worse".
+- **Mixed benchmarks.** 2018 is *average pre-match* odds (no free 2018 *closing*
+  line was found) and *group stage only* (the upstream set was frozen
+  mid-tournament). Average odds are softer than closing, so the 2018 "win" is the
+  weaker of the two results; the 2022 closing comparison is the meaningful bar.
+- Drop a better/longer odds file into `data/odds/` with the same columns and
+  `run_market_backtest.py` extends automatically.
 
 Reproduce: `python scripts/fetch_odds.py` then `python scripts/run_market_backtest.py`.
 

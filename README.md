@@ -52,7 +52,7 @@ which is the match-level shadow of the same bias.
 | **2026 forecast (knockouts → winner)** | ✅ see [REPORT.md](REPORT.md) — Argentina 16.6%, Spain 12.5% (differentiated, **edge unproven**) |
 | Projected-XI availability input | ⬜ needs squad/availability data (laptop) |
 | Market tail-bias exploit + ROI backtest | ⬜ needs historical *outright* odds |
-| **Benchmark vs bookmaker closing odds** | ✅ done — **matches Pinnacle closing, doesn't beat it** ([MARKET.md](MARKET.md)) |
+| **Benchmark vs bookmaker odds (WC 2018 + 2022)** | ✅ done — **at market level; beats soft 2018 avg, matches sharp 2022 closing** ([MARKET.md](MARKET.md)) |
 
 ### The number to beat — baseline, out-of-sample
 
@@ -133,36 +133,36 @@ odds) is still untested.
 France/England/Germany (elite squads, lagged by results-Elo) rise toward the
 market; Argentina (strong results, older squad) falls. See `scripts/run_final_forecast.py`.
 
-### ➖ Versus the market: matches Pinnacle's closing line, does not beat it
+### ➖ Versus the market: the model sits *at market level* (doesn't beat a closing line)
 
-The hard bar, now tested. On all **64 WC-2022 matches**, scored against
-**Pinnacle closing** odds (the sharpest book; de-vigged), with the squad blend
-fit on 2018 and predicted on 2022 (out-of-sample):
+The hard bar, now tested on two World Cups with free odds. Probit models fit
+**leave-one-tournament-out** (each edition predicted from the other → fully OOS):
 
-| Forecast | RPS | ΔRPS vs market (paired t) |
-|---|--:|---|
-| **Market — Pinnacle closing** | **0.2079** | — |
-| Baseline Elo → Dixon-Coles | 0.2251 | +0.0172 (t=1.63) |
-| **Elo + squad value (OOS)** | **0.2102** | +0.0023 (t=0.35) |
+| Forecast | WC-2022 *(Pinnacle **closing**, sharp)* | WC-2018 *(average pre-match, soft)* |
+|---|--:|--:|
+| **Market (de-vigged)** | **0.2079** | **0.1963** |
+| Baseline Elo → Dixon-Coles | 0.2251 | 0.2026 |
+| **Elo + squad value (OOS)** | **0.2102** (Δ +0.0023, t=0.35) | **0.1933** (Δ −0.0030, t=−0.27) |
 
-**No edge over the closing line — exactly as predicted above; closing odds are
-near-efficient.** But the model *matches* the sharpest book to within 0.0023 RPS
-(indistinguishable from zero), and **squad value removes ~87% of plain Elo's
-deficit** to the market. Group-stage-only (cleanest slice): market 0.2253 vs
-model 0.2258 — dead level. Honest caveat: one tournament, 64 matches, wide CIs;
-2018 closing odds weren't freely available. Full write-up and the live outright
-comparison (where the model backs **USA at 6% vs the market's ~2%**) in
+**The model is level with the market** — a hair behind the *sharp* 2022 closing
+line, a hair ahead of the *softer* 2018 average line; the sign just tracks how
+sharp the price is. No *proven* edge over a closing price (exactly as predicted —
+closing odds are near-efficient), but not beaten by one either. In **both**
+tournaments plain Elo trails the market and **squad value closes the gap**.
+Honest caveats: 112 matches, wide CIs, and the two bars differ in sharpness (2018
+is *average* odds, group stage only — the weaker result). Full write-up + the
+live outright comparison (model backs **USA at 6% vs the market's ~2%**) in
 [MARKET.md](MARKET.md). Run: `python scripts/fetch_odds.py && python scripts/run_market_backtest.py`.
 
 ## Why the network setup looks the way it does
 
 This was developed in Claude Code's web sandbox. On the GitHub-only egress
 policy, the historical-results backbone (every international since 1872), the
-Transfermarkt squad values and now the **WC-2022 Pinnacle closing odds** are all
-pulled from public GitHub mirrors — enough to stand up the control, the squad
-edge *and* the bookmaker benchmark with zero paid feeds. (Live outright odds and
-any 2018 historical odds need a wider egress policy or a manual drop into
-`data/odds/`.)
+Transfermarkt squad values and the **WC-2022 Pinnacle closing + WC-2018 average
+odds** are all pulled from public GitHub mirrors — enough to stand up the
+control, the squad edge *and* the bookmaker benchmark with zero paid feeds. (Live
+outright odds and a 2018 *closing* line need a wider egress policy or a manual
+drop into `data/odds/`; see [MARKET.md](MARKET.md).)
 
 ## Run it
 

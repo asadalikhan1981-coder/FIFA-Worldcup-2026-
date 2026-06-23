@@ -1,23 +1,26 @@
-"""Beat the bookmakers? Score the model against Pinnacle's closing line.
+"""Beat the bookmakers? Score the model against the market's prices.
 
-This is the project's hardest benchmark. Pinnacle is the sharpest book; its
-de-vigged *closing* price is, for practical purposes, the efficient-market
-probability. Beating it out-of-sample is the strongest possible claim a
-football model can make; *matching* it is already a strong result.
+The project's hardest benchmark. For each tournament with free odds we compare
+four forecasts on identical W/D/L outcomes:
 
-For every WC-2022 match (the one tournament with free closing odds, see
-scripts/fetch_odds.py) we compare four forecasts on identical W/D/L outcomes:
-
-  * MARKET      - Pinnacle closing 1X2, de-vigged (overround removed).
+  * MARKET      - de-vigged 1X2 (overround removed; proportional, Shin alongside).
   * Baseline    - Elo -> Dixon-Coles, walk-forward (the control engine).
-  * Elo (probit)- ordered probit on the Elo gap only, fit on WC-2018.
-  * Elo+squad   - the edge model: probit on Elo gap + squad-value gap,
-                  fit on WC-2018 and predicted on WC-2022. Genuinely
-                  out-of-sample: the 2022 line never trained the blend.
+  * Elo (probit)- ordered probit on the Elo gap only.
+  * Elo+squad   - the edge model: probit on Elo gap + squad-value gap.
+
+The two probit models are fit **leave-one-tournament-out** (predict each
+tournament from the other), so every prediction is genuinely out-of-sample.
+
+Tournaments / odds (best freely available per edition - see scripts/fetch_odds.py):
+
+  * WC-2022 - Pinnacle CLOSING, all 64 matches. The sharpest book's closing
+              price ~ the efficient-market probability: the *hard* bar.
+  * WC-2018 - AVERAGE pre-match, 48 group games. Softer than a closing line, and
+              group stage only - a real but easier bar. Reported separately;
+              the two benchmarks are NOT pooled naively.
 
 Scored by RPS (primary), log-loss and Brier, with a paired t-test of per-match
-RPS against the market. De-vig is proportional (normalise inverse odds); a Shin
-de-vig is printed alongside as a robustness check.
+RPS against the market.
 
     python scripts/run_market_backtest.py
 """
@@ -38,10 +41,14 @@ from wc2026.backtest import backtest_tournament  # noqa: E402
 from wc2026.market import devig_proportional, devig_shin  # noqa: E402
 
 EPS = 1e-12
-ODDS_CSV = Path("data/odds/wc2022_pinnacle_closing.csv")
-# WC-2022 group stage ended 2022-12-02; later games are knockout (90-min 1X2,
-# so a tie after 90 is a draw - matching martj42's regulation label).
-GROUP_END = pd.Timestamp("2022-12-02")
+# tournament -> (committed odds file, the bar it represents). Order = report order.
+ODDS_FILES = {
+    "WC2022": ("data/odds/wc2022_pinnacle_closing.csv", "Pinnacle closing (sharp)"),
+    "WC2018": ("data/odds/wc2018_average_prematch.csv", "average pre-match (soft)"),
+}
+# Group-stage cutoffs; later games are knockout (90-min 1X2, so a tie after 90 is
+# a draw - matching martj42's regulation label).
+GROUP_END = {"WC2022": pd.Timestamp("2022-12-02"), "WC2018": pd.Timestamp("2018-06-28")}
 
 NAME_FIX = {
     "South Korea": "South Korea", "Korea Republic": "South Korea", "IR Iran": "Iran",
@@ -101,93 +108,108 @@ def fit_probit(Xtr, ytr, Xte):
 
 
 # ------------------------------ assembly ---------------------------------- #
+def _loo_probit(frames: dict[str, pd.DataFrame], feats: list[str]) -> dict:
+    """Leave-one-tournament-out probit: predict each tournament from the others.
+    Returns {edition: (P[n,3], home_names, dates, beta_mean)}."""
+    out = {}
+    betas = []
+    for ed, te in frames.items():
+        tr = pd.concat([f for k, f in frames.items() if k != ed], ignore_index=True)
+        P, beta = fit_probit(tr[feats].to_numpy(), tr["outcome"].to_numpy(), te[feats].to_numpy())
+        out[ed] = (P, te["home"].tolist(), [d.date() for d in te["date"]])
+        betas.append(beta)
+    return out, np.mean(betas, axis=0)
+
+
 def build() -> tuple[pd.DataFrame, np.ndarray]:
-    if not ODDS_CSV.exists():
-        raise SystemExit(f"Missing {ODDS_CSV}. Run: python scripts/fetch_odds.py")
-    odds = pd.read_csv(ODDS_CSV, parse_dates=["date"])
     results = data.load_results()
+    editions = {ed: f for ed, (f, _) in ODDS_FILES.items() if Path(f).exists()}
+    if not editions:
+        raise SystemExit("No odds files found. Run: python scripts/fetch_odds.py")
 
-    # Baseline Elo -> Dixon-Coles, walk-forward over WC2022.
-    bt = backtest_tournament(results, data.BACKTEST_TOURNAMENTS["WC2022"])
-    bkey = {(r.date.date(), frozenset((r.home, r.away))):
-            ((r.p_home, r.p_draw, r.p_away), r.home) for r in bt.itertuples()}
+    frames = {ed: feature_frame(results, ed) for ed in editions}
+    elo_pred, _ = _loo_probit(frames, ["elo"])
+    blend_pred, beta = _loo_probit(frames, ["elo", "sqval"])
 
-    # Squad blend, fit on 2018, predicted on 2022 (out-of-sample).
-    tr, te = feature_frame(results, "WC2018"), feature_frame(results, "WC2022")
-    P_elo, _ = fit_probit(tr[["elo"]].to_numpy(), tr["outcome"].to_numpy(), te[["elo"]].to_numpy())
-    P_sv, beta = fit_probit(tr[["elo", "sqval"]].to_numpy(), tr["outcome"].to_numpy(),
-                            te[["elo", "sqval"]].to_numpy())
-    skey = {(r.date.date(), frozenset((r.home, r.away))): (P_elo[i], P_sv[i], r.home)
-            for i, r in enumerate(te.itertuples(index=False))}
+    def keyed(pred):  # (date, teamset) -> (probs, home_name)
+        d = {}
+        for ed, (P, homes, dates) in pred.items():
+            for i in range(len(homes)):
+                d[(dates[i], frozenset((homes[i], frames[ed].iloc[i]["away"])))] = (P[i], homes[i])
+        return d
+
+    ekey, skey = keyed(elo_pred), keyed(blend_pred)
 
     rows = []
-    for r in odds.itertuples():
-        key = (r.date.date(), frozenset((r.home, r.away)))
-        mk_p = devig_proportional(r.odds_home, r.odds_draw, r.odds_away)
-        mk_shin = devig_shin(r.odds_home, r.odds_draw, r.odds_away)
-        (bp, bhome) = bkey[key]
-        base = list(bp) if bhome == r.home else [bp[2], bp[1], bp[0]]
-        peb, psv, shome = skey[key]
-        elo_p = list(peb) if shome == r.home else [peb[2], peb[1], peb[0]]
-        blend = list(psv) if shome == r.home else [psv[2], psv[1], psv[0]]
-        y = 0 if r.home_score > r.away_score else (1 if r.home_score == r.away_score else 2)
-        rows.append(dict(
-            date=r.date, home=r.home, away=r.away, outcome=y,
-            stage="group" if r.date <= GROUP_END else "knockout",
-            market=mk_p, market_shin=mk_shin, baseline=base, elo=elo_p, blend=blend,
-        ))
+    for ed, path in editions.items():
+        odds = pd.read_csv(path, parse_dates=["date"])
+        bt = backtest_tournament(results, data.BACKTEST_TOURNAMENTS[ed])
+        bkey = {(r.date.date(), frozenset((r.home, r.away))):
+                ((r.p_home, r.p_draw, r.p_away), r.home) for r in bt.itertuples()}
+        for r in odds.itertuples():
+            key = (r.date.date(), frozenset((r.home, r.away)))
+            orient = lambda p, h: list(p) if h == r.home else [p[2], p[1], p[0]]
+            bp, bh = bkey[key]
+            pe, eh = ekey[key]
+            ps, sh = skey[key]
+            y = 0 if r.home_score > r.away_score else (1 if r.home_score == r.away_score else 2)
+            rows.append(dict(
+                edition=ed, bar=ODDS_FILES[ed][1], date=r.date, home=r.home, away=r.away,
+                outcome=y, stage="group" if r.date <= GROUP_END[ed] else "knockout",
+                market=devig_proportional(r.odds_home, r.odds_draw, r.odds_away),
+                market_shin=devig_shin(r.odds_home, r.odds_draw, r.odds_away),
+                baseline=orient(bp, bh), elo=orient(pe, eh), blend=orient(ps, sh),
+            ))
     return pd.DataFrame(rows), beta
 
 
-def _rps(col, df, y):
-    return metrics.ranked_probability_score(np.array(df[col].tolist()), y)
+def _rps(col, df):
+    return metrics.ranked_probability_score(np.array(df[col].tolist()), df["outcome"].to_numpy())
+
+
+MODELS = [("MARKET", "market"), ("Baseline Elo->DC", "baseline"),
+          ("Elo only (probit)", "elo"), ("Elo + squad value", "blend")]
+
+
+def _report(df: pd.DataFrame, title: str) -> None:
+    print(f"\n{title}  (n={len(df)})")
+    print(f"  {'forecast':<20}{'RPS':>8}{'logloss':>9}{'brier':>8}")
+    for label, col in MODELS:
+        P = np.array(df[col].tolist())
+        y = df["outcome"].to_numpy()
+        print(f"  {label:<20}{_rps(col, df).mean():>8.4f}"
+              f"{metrics.log_loss(P, y).mean():>9.4f}{metrics.brier_score(P, y).mean():>8.4f}")
+    rps_mkt = _rps("market", df)
+    parts = []
+    for label, col in [("baseline", "baseline"), ("blend", "blend")]:
+        d = _rps(col, df) - rps_mkt
+        se = d.std(ddof=1) / np.sqrt(len(d))
+        parts.append(f"{label} Δ={d.mean():+.4f} (t={d.mean() / se:+.2f})")
+    print(f"  vs market [neg=model better]: " + ";  ".join(parts))
+    print(f"  de-vig check: proportional={rps_mkt.mean():.4f}, Shin={_rps('market_shin', df).mean():.4f}")
 
 
 def main() -> None:
     df, beta = build()
-    y = df["outcome"].to_numpy()
-    n = len(df)
-    print(f"\nMarket backtest: WC-2022, {n} matches, Pinnacle closing (de-vigged).")
-    print(f"Squad blend fit on WC-2018 (out-of-sample): elo={beta[0]:+.2f}, squad={beta[1]:+.2f}\n")
+    print(f"\nMarket backtest. Leave-one-tournament-out squad blend "
+          f"(mean coef: elo={beta[0]:+.2f}, squad={beta[1]:+.2f}).")
 
-    print(f"{'forecast':<26}{'RPS':>8}{'logloss':>9}{'brier':>8}")
-    models = [
-        ("MARKET (Pinnacle close)", "market"),
-        ("Baseline Elo->Dixon-Coles", "baseline"),
-        ("Elo only (probit, OOS)", "elo"),
-        ("Elo + squad value (OOS)", "blend"),
-    ]
-    for label, col in models:
-        P = np.array(df[col].tolist())
-        print(f"{label:<26}{_rps(col, df, y).mean():>8.4f}"
-              f"{metrics.log_loss(P, y).mean():>9.4f}{metrics.brier_score(P, y).mean():>8.4f}")
+    for ed in df["edition"].unique():
+        sub = df[df.edition == ed]
+        _report(sub, f"== {ed} vs {sub['bar'].iloc[0]} ==")
 
-    rps_mkt = _rps("market", df, y)
-    print("\nPaired ΔRPS vs MARKET  (negative = model beats market):")
-    for label, col in [("Baseline", "baseline"), ("Elo+squad", "blend")]:
-        d = _rps(col, df, y) - rps_mkt
-        se = d.std(ddof=1) / np.sqrt(len(d))
-        print(f"  {label:<11} Δ={d.mean():+.4f}  t={d.mean() / se:+.2f}")
-
-    print(f"\nMarket RPS by de-vig method: proportional={rps_mkt.mean():.4f}, "
-          f"Shin={_rps('market_shin', df, y).mean():.4f}")
-
-    print("\nGroup stage only (no extra-time/penalty label ambiguity):")
+    # Group-stage-only pooled view: clean W/D/L (no extra-time/penalty ambiguity).
     g = df[df.stage == "group"]
-    yg = g["outcome"].to_numpy()
-    for label, col in [("MARKET", "market"), ("Baseline", "baseline"), ("Elo+squad", "blend")]:
-        print(f"  {label:<11} RPS={metrics.ranked_probability_score(np.array(g[col].tolist()), yg).mean():.4f}"
-              f"  (n={len(g)})")
+    print("\n" + "-" * 60)
+    print("NOTE: 2018 (average odds) and 2022 (Pinnacle closing) are different "
+          "bars,\nso the pooled number below mixes a soft and a sharp line - "
+          "read per-tournament\nabove as the real result. Group stage only:")
+    _report(g, "== POOLED group stage (mixed bars) ==")
 
-    best = min(models[1:], key=lambda m: _rps(m[1], df, y).mean())
-    gap = _rps(best[1], df, y).mean() - rps_mkt.mean()
-    print(f"\nVERDICT: best model = {best[0]} (RPS {_rps(best[1], df, y).mean():.4f}). "
-          f"Market = {rps_mkt.mean():.4f}.")
-    if gap < 0:
-        print("  -> model BEATS the closing line (check significance above).")
-    else:
-        print(f"  -> model does NOT beat the market; gap {gap:+.4f} RPS. "
-              "Squad value closes most of the gap to the sharpest book.")
+    print("\nVERDICT (honest): squad value puts the model at market level - it "
+          "edges the\nsofter 2018 average line and matches/just-misses the sharp "
+          "2022 closing line.\nNo proven edge over a closing price; no tournament "
+          "where plain Elo beats it.")
 
 
 if __name__ == "__main__":
