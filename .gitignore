@@ -12,4 +12,5 @@ data/raw/*
 # Generated artefacts
 results/*.png
 results/*.csv
+results/*.txt
 !results/.gitkeep
