@@ -31,18 +31,18 @@ fv = importlib.util.module_from_spec(
 sys.modules["fv"] = fv; fv.__loader__.exec_module(fv)
 
 # Host advantage (probit units). General home advantage is ~0.33; WC hosts have
-# historically done even better (~0.57, partly their own quality). We use the
-# clean general-home estimate as a central, slightly conservative choice because
-# 2026 has three co-hosts sharing crowds and venues. The USA benefits most
-# structurally (most venues; the latter knockout rounds and final are in the US).
-HOST_ETA = 0.33
-HOSTS = ["United States", "Mexico", "Canada"]
+# historically done even better (~0.57). Team-specific per the crowd reality:
+#   USA    - full, plays in the US throughout
+#   Mexico - full, de facto home ANYWHERE in North America (~75% pro-Mexico
+#            crowds even on US soil; Mexico routinely plays "home" games in the US)
+#   Canada - genuine home in the group stage, but ~neutral on US soil in the
+#            knockouts (no comparable US fanbase), so a reduced central value
+HOST_ETA = {"United States": 0.33, "Mexico": 0.33, "Canada": 0.20}
 
 
-def build_pairwise(teams, R, sqz, beta, delta, host_eta):
+def build_pairwise(teams, R, sqz, beta, delta, scale=1.0):
     n = len(teams)
-    hset = {teams.index(h) for h in HOSTS if h in teams}
-    hb = np.array([host_eta if i in hset else 0.0 for i in range(n)])
+    hb = np.array([scale * HOST_ETA.get(t, 0.0) for t in teams])
     pW = np.zeros((n, n)); pD = np.zeros((n, n)); pL = np.zeros((n, n))
     for a in range(n):
         for b in range(n):
@@ -56,7 +56,7 @@ def build_pairwise(teams, R, sqz, beta, delta, host_eta):
 
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1_000_000
-    host_eta = float(sys.argv[2]) if len(sys.argv) > 2 else HOST_ETA
+    scale = float(sys.argv[2]) if len(sys.argv) > 2 else 1.0
     results = data.load_results()
     groups, bp, bgd, bgf, rem, wc = rf.derive_state(results)
     teams = sorted({t for g in groups.values() for t in g})
@@ -66,10 +66,10 @@ def main():
     model = elo.build_history(results, until=fv.WC_START)
     R = np.array([model.get(t) for t in teams])
     sqz = np.array([sv.squad_strength(2026).get(t, 0.0) for t in teams])
-    pw = build_pairwise(teams, R, sqz, beta, delta, host_eta)
+    pw = build_pairwise(teams, R, sqz, beta, delta, scale)
 
     print(f"FINAL model (Elo+squad+host), {n:,} sims. "
-          f"coef elo={beta[0]:+.2f} squad={beta[1]:+.2f} host_eta={host_eta:+.2f}")
+          f"coef elo={beta[0]:+.2f} squad={beta[1]:+.2f} host(US/MX={0.33*scale:.2f}, CA={0.20*scale:.2f})")
     df = simulate.simulate(groups, bp, bgd, bgf, rem, pw, n_sims=n, seed=2026)
     for c in simulate.ROUNDS:
         df[c] = (df[c] * 100).round(2)

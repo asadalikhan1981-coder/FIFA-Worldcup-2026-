@@ -1,1 +1,0 @@
-FINAL model (Elo+squad+host), 10,000,000 sims. coef elo=+0.08 squad=+0.35 host_eta=+0.33
