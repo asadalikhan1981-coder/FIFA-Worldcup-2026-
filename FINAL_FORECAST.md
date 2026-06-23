@@ -38,7 +38,7 @@ We tried and **rejected** several "clever" ideas because they failed an honest o
 
 - ✅ **Beats the standard Elo model out-of-sample** (RPS 0.2039 vs 0.2152) — squad value even beats Elo on its own, and the result is robust to stress-testing. This is real and new.
 - ⚠️ **Not yet statistically bulletproof** — only 2 World Cups (128 matches) have free public squad data, so it's directionally strong but not significant (t = −1.49).
-- ❌ **Not yet tested against the bookmakers** — beating the *market* (the hard bar) needs historical odds; still to do.
+- ➖ **Tested against the bookmakers — matches, doesn't beat.** On all 64 WC-2022 matches vs **Pinnacle closing** odds (the sharpest book), the model scores **RPS 0.2102 vs the market's 0.2079** — statistically level (t = 0.35), and squad value removes ~87% of plain Elo's deficit to the line. No edge over near-efficient closing odds (as expected), but it *matches* them. See [MARKET.md](MARKET.md).
 - Simulation count (1M) buys *precision*, not credibility — the numbers are converged.
 
 ## Data — all free & public

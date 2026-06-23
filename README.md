@@ -51,8 +51,8 @@ which is the match-level shadow of the same bias.
 | Monte-Carlo bracket sim over the real 2026 draw | ✅ built + tested; conditions on live results |
 | **2026 forecast (knockouts → winner)** | ✅ see [REPORT.md](REPORT.md) — Argentina 16.6%, Spain 12.5% (differentiated, **edge unproven**) |
 | Projected-XI availability input | ⬜ needs squad/availability data (laptop) |
-| Market tail-bias exploit + ROI backtest | ⬜ needs historical odds (laptop) |
-| Benchmark vs bookmaker closing odds | ⬜ needs odds data (laptop) |
+| Market tail-bias exploit + ROI backtest | ⬜ needs historical *outright* odds |
+| **Benchmark vs bookmaker closing odds** | ✅ done — **matches Pinnacle closing, doesn't beat it** ([MARKET.md](MARKET.md)) |
 
 ### The number to beat — baseline, out-of-sample
 
@@ -133,20 +133,45 @@ odds) is still untested.
 France/England/Germany (elite squads, lagged by results-Elo) rise toward the
 market; Argentina (strong results, older squad) falls. See `scripts/run_final_forecast.py`.
 
+### ➖ Versus the market: matches Pinnacle's closing line, does not beat it
+
+The hard bar, now tested. On all **64 WC-2022 matches**, scored against
+**Pinnacle closing** odds (the sharpest book; de-vigged), with the squad blend
+fit on 2018 and predicted on 2022 (out-of-sample):
+
+| Forecast | RPS | ΔRPS vs market (paired t) |
+|---|--:|---|
+| **Market — Pinnacle closing** | **0.2079** | — |
+| Baseline Elo → Dixon-Coles | 0.2251 | +0.0172 (t=1.63) |
+| **Elo + squad value (OOS)** | **0.2102** | +0.0023 (t=0.35) |
+
+**No edge over the closing line — exactly as predicted above; closing odds are
+near-efficient.** But the model *matches* the sharpest book to within 0.0023 RPS
+(indistinguishable from zero), and **squad value removes ~87% of plain Elo's
+deficit** to the market. Group-stage-only (cleanest slice): market 0.2253 vs
+model 0.2258 — dead level. Honest caveat: one tournament, 64 matches, wide CIs;
+2018 closing odds weren't freely available. Full write-up and the live outright
+comparison (where the model backs **USA at 6% vs the market's ~2%**) in
+[MARKET.md](MARKET.md). Run: `python scripts/fetch_odds.py && python scripts/run_market_backtest.py`.
+
 ## Why the network setup looks the way it does
 
-This was developed in Claude Code's web sandbox, whose egress policy reaches only
-GitHub. The historical-results backbone (every international since 1872) is
-pulled from GitHub and is enough to stand up the control + backtest with zero
-external dependencies. The data-hungry parts (squad value, xG, **odds**) are
-gathered on the user's laptop — see `data/README.md` for the exact shopping list.
+This was developed in Claude Code's web sandbox. On the GitHub-only egress
+policy, the historical-results backbone (every international since 1872), the
+Transfermarkt squad values and now the **WC-2022 Pinnacle closing odds** are all
+pulled from public GitHub mirrors — enough to stand up the control, the squad
+edge *and* the bookmaker benchmark with zero paid feeds. (Live outright odds and
+any 2018 historical odds need a wider egress policy or a manual drop into
+`data/odds/`.)
 
 ## Run it
 
 ```bash
 pip install -r requirements.txt
 python scripts/run_baseline_backtest.py     # prints the table above, writes results/
-PYTHONPATH=src python -m pytest tests/ -q    # 14 tests
+python scripts/fetch_odds.py                 # pull WC-2022 Pinnacle closing odds
+python scripts/run_market_backtest.py        # model vs the closing line
+PYTHONPATH=src python -m pytest tests/ -q    # 25 tests
 ```
 
 The backtest auto-fetches the results CSV from GitHub if `data/raw/results.csv`
